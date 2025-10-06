@@ -1,5 +1,6 @@
 import requests
 import json
+import time
 import pandas as pd
 from datetime import datetime
 from tqdm import tqdm
@@ -36,6 +37,9 @@ for appid, info in tqdm(data_all.items()):
             "Price": info.get("price", "0"),
             "InitialPrice": info.get("initialprice", "0"),
             "Discount": info.get("discount", "0"),
+            "Tags": "",        # SteamSpy top100 no trae tags
+            "Languages": "",   # No disponible en esta lista
+            "Genres": "",      # No disponible en esta lista
         })
     except:
         continue
@@ -43,15 +47,44 @@ for appid, info in tqdm(data_all.items()):
 
 #Crear DataFrame
 df = pd.DataFrame(juegos)
+print(f"✅ Se descargaron {len(df)} juegos de SteamSpy.")
 
-# Asegurarse de que exista la columna 'Tags'
-if 'Tags' not in df.columns:
-    df['Tags'] = ""
 
-#Calcular dificultad aproximada
+#Obtener tags desde la API de Steam Store
+print("\nObteniendo tags (géneros y categorías) desde Steam Store...")
 
-keywords_dificil = ["Difficult", "Souls-like", "Hardcore"]
-df['Dificultad'] = 0
+tags_list = []
+for appid in tqdm(df["AppID"], desc="Consultando API Steam Store"):
+    try:
+        url = f"https://store.steampowered.com/api/appdetails?appids={appid}&cc=us&l=en"
+        r = requests.get(url, timeout=6)
+        data = r.json()
+
+        if not data or not data.get(str(appid), {}).get("success"):
+            tags_list.append("")
+            continue
+
+        info = data[str(appid)]["data"]
+        genres = [g["description"] for g in info.get("genres", [])]
+        categories = [c["description"] for c in info.get("categories", [])]
+        tags = genres + categories
+        tags_text = ", ".join(tags)
+        tags_list.append(tags_text)
+    except Exception as e:
+        print(f"⚠️ Error con AppID {appid}: {e}")
+        tags_list.append("")
+    time.sleep(0.3)  # evitar bloquear la API
+
+df["Tags"] = tags_list
+
+
+# Clasificar juegos por dificultad
+keywords_dificil = ["Hard", "Difficult", "Souls-like", "Challenging", "Roguelike", "Hardcore", "Tough", "Permadeath"]
+
+df["Dificultad"] = df["Tags"].apply(
+    lambda x: 1 if any(word.lower() in str(x).lower() for word in keywords_dificil) else 0
+)
+
 
 #Guardar CSV
 df.to_csv("steam_games_last10years.csv", index=False, encoding="utf-8-sig")
