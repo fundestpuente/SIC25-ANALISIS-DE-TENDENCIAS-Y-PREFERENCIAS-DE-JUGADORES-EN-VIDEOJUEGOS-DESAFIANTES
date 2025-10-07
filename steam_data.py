@@ -38,8 +38,6 @@ for appid, info in tqdm(data_all.items()):
             "InitialPrice": info.get("initialprice", "0"),
             "Discount": info.get("discount", "0"),
             "Tags": "",        # SteamSpy top100 no trae tags
-            "Languages": "",   # No disponible en esta lista
-            "Genres": "",      # No disponible en esta lista
         })
     except:
         continue
@@ -54,6 +52,9 @@ print(f"✅ Se descargaron {len(df)} juegos de SteamSpy.")
 print("\nObteniendo tags (géneros y categorías) desde Steam Store...")
 
 tags_list = []
+release_years = []
+
+
 for appid in tqdm(df["AppID"], desc="Consultando API Steam Store"):
     try:
         url = f"https://store.steampowered.com/api/appdetails?appids={appid}&cc=us&l=en"
@@ -62,6 +63,7 @@ for appid in tqdm(df["AppID"], desc="Consultando API Steam Store"):
 
         if not data or not data.get(str(appid), {}).get("success"):
             tags_list.append("")
+            release_years.append(None)
             continue
 
         info = data[str(appid)]["data"]
@@ -70,12 +72,25 @@ for appid in tqdm(df["AppID"], desc="Consultando API Steam Store"):
         tags = genres + categories
         tags_text = ", ".join(tags)
         tags_list.append(tags_text)
+
+        release_date = info.get("release_date", {}).get("date", "")
+        # Steam puede tener formatos como "12 Feb, 2020" o solo "2020"
+        year = None
+        for part in release_date.split():
+            if part.isdigit() and len(part) == 4:  # detecta un año
+                year = int(part)
+                break
+        release_years.append(year)
+
     except Exception as e:
         print(f"⚠️ Error con AppID {appid}: {e}")
         tags_list.append("")
     time.sleep(0.3)  # evitar bloquear la API
 
+
+
 df["Tags"] = tags_list
+df["ReleaseYear"] = release_years
 
 
 # Clasificar juegos por dificultad
