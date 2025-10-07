@@ -1,34 +1,63 @@
 import requests
 import json
 import time
+import heapq
 import pandas as pd
 from datetime import datetime
 from tqdm import tqdm
 
-#Descargar datos de SteamSpy (top juegos forever)
-print("🔍 Descargando datos de SteamSpy (top juegos, últimos 10 años)...")
+#Descargar datos de SteamSpy 
+print("🔍 Descargando datos de SteamSpy ...")
 
-# Usamos top 100 juegos para no sobrecargar la PC
-url = "https://steamspy.com/api.php?request=top100forever"  # más ligero que 'all'
-response = requests.get(url)
-data_all = response.json()
+top_n = 2000
+sleep_time = 0.2  # tiempo entre requests
 
-for i, (appid, info) in enumerate(data_all.items()):
-    print(f"\nAppID: {appid}")
-    print(json.dumps(info, indent=2))
-    if i >= 2:  # solo los primeros 3
+max_retries = 3
+retries = 0
+
+page = 0
+max_page = 86 
+
+# Usamos top 2000 juegos para no sobrecargar la PC
+heap = []  # min-heap de (AverageForever, juego_dict)
+page = 0
+
+while page <= max_page:
+    url = f"https://steamspy.com/api.php?request=all&page={page}"
+    try:
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        retries = 0  # resetear reintentos si fue exitoso
+    except:
+        retries += 1
+        print(f"Error en página {page}, reintentando...")
+        if retries >= max_retries:
+            print(f"⚠ Saltando página {page} después de {max_retries} intentos fallidos")
+            page += 1
+            retries = 0
+        time.sleep(1)
+        continue
+
+    if not data:
+        print(" Se terminó de descargar todo SteamSpy.")
         break
 
-juegos = []
-for appid, info in tqdm(data_all.items()):
-    try:
-        juegos.append({
+    for appid, info in data.items():
+        # Convertir Owners a entero
+        owners_str = info.get("owners", "0").replace(",", "")
+        try:
+            owners = int(owners_str)
+        except:
+            owners = 0
+
+
+        juego = {
             "AppID": appid,
             "Nombre": info.get("name", ""),
             "Developer": info.get("developer", ""),
             "Publisher": info.get("publisher", ""),
             "ScoreRank": info.get("score_rank", ""),
-            "Owners": info.get("owners", ""),
+            "Owners": owners,
             "AverageForever": info.get("average_forever", 0),
             "Average2Weeks": info.get("average_2weeks", 0),
             "MedianForever": info.get("median_forever", 0),
@@ -38,69 +67,20 @@ for appid, info in tqdm(data_all.items()):
             "InitialPrice": info.get("initialprice", "0"),
             "Discount": info.get("discount", "0"),
             "Tags": "",        # SteamSpy top100 no trae tags
-        })
-    except:
-        continue
-
+        }
+        if len(heap) < top_n:
+            heapq.heappush(heap, (juego["AverageForever"], juego["Owners"], juego["AppID"], juego))
+        else:
+            # Compara AverageForever y Owners (desempate)
+            if (juego["AverageForever"] > heap[0][0] or (juego["AverageForever"] == heap[0][0] and juego["Owners"] > heap[0][1])):
+                    heapq.heapreplace(heap, (juego["AverageForever"], juego["Owners"], juego["AppID"], juego))
+    page += 1
+    time.sleep(sleep_time)
 
 #Crear DataFrame
-df = pd.DataFrame(juegos)
-print(f"✅ Se descargaron {len(df)} juegos de SteamSpy.")
-
-
-#Obtener tags desde la API de Steam Store
-print("\nObteniendo tags (géneros y categorías) desde Steam Store...")
-
-tags_list = []
-release_years = []
-
-
-for appid in tqdm(df["AppID"], desc="Consultando API Steam Store"):
-    try:
-        url = f"https://store.steampowered.com/api/appdetails?appids={appid}&cc=us&l=en"
-        r = requests.get(url, timeout=6)
-        data = r.json()
-
-        if not data or not data.get(str(appid), {}).get("success"):
-            tags_list.append("")
-            release_years.append(None)
-            continue
-
-        info = data[str(appid)]["data"]
-        genres = [g["description"] for g in info.get("genres", [])]
-        categories = [c["description"] for c in info.get("categories", [])]
-        tags = genres + categories
-        tags_text = ", ".join(tags)
-        tags_list.append(tags_text)
-
-        release_date = info.get("release_date", {}).get("date", "")
-        # Steam puede tener formatos como "12 Feb, 2020" o solo "2020"
-        year = None
-        for part in release_date.split():
-            if part.isdigit() and len(part) == 4:  # detecta un año
-                year = int(part)
-                break
-        release_years.append(year)
-
-    except Exception as e:
-        print(f"⚠️ Error con AppID {appid}: {e}")
-        tags_list.append("")
-    time.sleep(0.3)  # evitar bloquear la API
-
-
-
-df["Tags"] = tags_list
-df["ReleaseYear"] = release_years
-
-
-# Clasificar juegos por dificultad
-keywords_dificil = ["Hard", "Difficult", "Souls-like", "Challenging", "Roguelike", "Hardcore", "Tough", "Permadeath"]
-
-df["Dificultad"] = df["Tags"].apply(
-    lambda x: 1 if any(word.lower() in str(x).lower() for word in keywords_dificil) else 0
-)
-
+df = pd.DataFrame([x[3] for x in heap])
+print(f"✅ Top {len(df)} juegos seleccionado.")
 
 #Guardar CSV
-df.to_csv("steam_games_last10years.csv", index=False, encoding="utf-8-sig")
-print(f"✅ Dataset generado con {len(df)} juegos. Guardado en steam_games_last10years.csv")
+df.to_csv("steam_games.csv", index=False, encoding="utf-8-sig")
+print(f"✅ Dataset generado con {len(df)} juegos. Guardado en steam_games.csv")
