@@ -4,15 +4,11 @@ import seaborn as sns
 
 df= pd.read_csv("steam_games_last10years.csv")
 
-silksong_info = df[df["AppID"] == "1030300"]
-print(silksong_info)
-
-
 #===================================1=======================================
 #minutos a horas
 df["AverageForever"] = df["AverageForever"] / 60  
 
-# Agrupar por anio y dificultad, y calcular promedio
+# Agrupar por año y dificultad, y calcular promedio
 promedio_por_anio = (
     df.groupby(["ReleaseYear", "Dificultad"])["AverageForever"]
     .mean()
@@ -29,11 +25,7 @@ faciles = promedio_por_anio[promedio_por_anio["Dificultad"] == 0]
 df_dificiles = df[df["Dificultad"] == 1].copy()
 
 #Calcular horas totales estimadas
-if "CCU" in df.columns:
-    df_dificiles["HorasTotalesEstimadas"] = df_dificiles["AverageForever"] * df_dificiles["CCU"]
-else:
-    print("⚠️ No se encontró la columna 'CCU', se omitirá HorasTotalesEstimadas.")
-    df_dificiles["HorasTotalesEstimadas"] = df_dificiles["AverageForever"]
+df_dificiles["HorasTotalesEstimadas"] = df_dificiles["AverageForever"]
 
 
 # Graficas
@@ -67,7 +59,7 @@ plt.grid(True, alpha=0.3)
 plt.show()
 
 #=======================================3=====================================
-#Horas totales estimadas por año (indicador empresarial)
+#Horas totales estimadas por año 
 horas_por_anio = df_dificiles.groupby("ReleaseYear")["HorasTotalesEstimadas"].sum().reset_index()
 
 plt.figure(figsize=(10,6))
