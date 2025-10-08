@@ -4,6 +4,10 @@ import seaborn as sns
 
 df= pd.read_csv("steam_games_last10years.csv")
 
+silksong_info = df[df["AppID"] == "1030300"]
+print(silksong_info)
+
+
 #===================================1=======================================
 #minutos a horas
 df["AverageForever"] = df["AverageForever"] / 60  
