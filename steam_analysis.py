@@ -2,8 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-df= pd.read_csv("steam_games_last10years.csv")
-
+df= pd.read_csv("steam_games.csv")
+df = df[df["ReleaseYear"] <= 2024]
 #===================================1=======================================
 #minutos a horas
 df["AverageForever"] = df["AverageForever"] / 60  
@@ -21,13 +21,11 @@ promedio_por_anio = (
 dificiles = promedio_por_anio[promedio_por_anio["Dificultad"] == 1]
 faciles = promedio_por_anio[promedio_por_anio["Dificultad"] == 0]
 
-#====================================2===================================
+#====================================3===================================
 # Filtrar solo juegos difíciles
 df_dificiles = df[df["Dificultad"] == 1].copy()
 
-#Calcular horas totales estimadas
 df_dificiles["HorasTotalesEstimadas"] = df_dificiles["AverageForever"]
-
 
 # Graficas
 #==================================1=========================================
@@ -43,21 +41,15 @@ plt.grid(True, linestyle="--", alpha=0.6)
 plt.show()
 
 #======================================2========================================
-#Dispersión con línea de regresión
+promedio_dificiles = df_dificiles.groupby("ReleaseYear")["AverageForever"].mean()
 plt.figure(figsize=(10,6))
-sns.regplot(
-    data=df_dificiles,
-    x="ReleaseYear",
-    y="AverageForever",
-    scatter_kws={'alpha':0.6},
-    line_kws={'color':'red'}
-)
-
-plt.title("Tiempo promedio jugado vs Año de lanzamiento (Juegos difíciles)")
+plt.plot(promedio_dificiles.index, promedio_dificiles.values, marker="o", color="red")
+plt.title("Promedio de horas jugadas por juegos difíciles por año")
 plt.xlabel("Año de lanzamiento")
-plt.ylabel("Horas promedio jugadas (AverageForever)")
-plt.grid(True, alpha=0.3)
+plt.ylabel("Horas promedio jugadas")
+plt.grid(True, alpha=0.5)
 plt.show()
+
 
 #=======================================3=====================================
 #Horas totales estimadas por año 
@@ -73,5 +65,26 @@ sns.lineplot(
 plt.title("Horas totales estimadas jugadas por año (Juegos difíciles)")
 plt.xlabel("Año de lanzamiento")
 plt.ylabel("Horas totales estimadas (AverageForever × CCU)")
+plt.grid(True, alpha=0.3)
+plt.show()
+
+#=====================================4==================================
+plt.figure(figsize=(8,6))
+plt.boxplot([df[df["Dificultad"]==0]["AverageForever"], df[df["Dificultad"]==1]["AverageForever"]],
+            labels=["Fáciles", "Difíciles"])
+plt.ylim(0, 500)  # limitar outliers extremos
+plt.ylabel("Horas promedio jugadas")
+plt.title("Distribución de horas jugadas: fácil vs difícil")
+plt.grid(True, alpha=0.3)
+plt.show()
+
+#=================================5===========================================
+df_dificiles = df[df["Dificultad"]==1].copy()
+plt.figure(figsize=(10,6))
+plt.scatter(df_dificiles["ReleaseYear"], df_dificiles["AverageForever"], alpha=0.6, color="red")
+plt.title("Horas jugadas vs Año de lanzamiento (juegos difíciles)")
+plt.xlabel("Año de lanzamiento")
+plt.ylabel("Horas promedio jugadas")
+plt.ylim(0, 500)
 plt.grid(True, alpha=0.3)
 plt.show()

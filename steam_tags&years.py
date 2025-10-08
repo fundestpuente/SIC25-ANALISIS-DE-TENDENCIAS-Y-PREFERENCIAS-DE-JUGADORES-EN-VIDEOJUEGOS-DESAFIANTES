@@ -31,7 +31,7 @@ for appid in tqdm(df["AppID"], desc="Consultando API Steam Store"):
             genres.append(g["description"])
         categories = []
         for c in info.get("categories", []):#Intentamos obtener solo la lista de categorias, si no hay informacion devolvemos una lista vacia
-            categories.append(g["description"])
+            categories.append(c["description"])
         tags = genres + categories
         tags_text = ", ".join(tags) #Volvemos una cadena la lista resultante de tags
         tags_list.append(tags_text)
@@ -48,10 +48,11 @@ for appid in tqdm(df["AppID"], desc="Consultando API Steam Store"):
     except Exception as e:
         print(f"Error con AppID {appid}: {e}")
         tags_list.append("")
+        release_years.append(None)
     time.sleep(0.3)  # evitar bloquear la API
 
 
-#Agregamos los valores al dataFrame
+#Agregamos los valores al dataFrame  1 
 df["Tags"] = tags_list 
 df["ReleaseYear"] = release_years
 
@@ -66,3 +67,6 @@ keywords_dificil = ["Hard", "Difficult", "Challenging", "Tough", "Hardcore", "So
 df["Dificultad"] = df["Tags"].apply(
     lambda x: 1 if any(word.lower() in str(x).lower() for word in keywords_dificil) else 0)
 #Si contiene alguna de las palabras claves que definimos en sus Tags lo catalgamos como un juego dificil == 1, si es facil ==0
+
+#Se actualiza el csv
+df.to_csv("steam_games.csv", index=False)
