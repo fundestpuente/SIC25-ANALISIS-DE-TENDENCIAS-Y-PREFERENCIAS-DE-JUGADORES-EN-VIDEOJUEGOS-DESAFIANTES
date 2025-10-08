@@ -88,3 +88,15 @@ plt.ylabel("Horas promedio jugadas")
 plt.ylim(0, 500)
 plt.grid(True, alpha=0.3)
 plt.show()
+
+#================================6==================================================
+# Gráfico circular
+labels = ["Fáciles", "Difíciles"]
+sizes = [df[df["Dificultad"]==0].shape[0], df[df["Dificultad"]==1].shape[0]]
+colors = ["green", "red"]
+
+plt.figure(figsize=(7,7))
+plt.pie(sizes, labels=labels, colors=colors, autopct="%1.1f%%", startangle=90, explode=(0.05, 0))
+plt.title("Proporción de juegos difíciles vs fáciles")
+plt.show()
+
