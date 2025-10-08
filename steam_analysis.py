@@ -8,6 +8,7 @@ df= pd.read_csv("steam_games_last10years.csv")
 #minutos a horas
 df["AverageForever"] = df["AverageForever"] / 60  
 
+
 # Agrupar por año y dificultad, y calcular promedio
 promedio_por_anio = (
     df.groupby(["ReleaseYear", "Dificultad"])["AverageForever"]
