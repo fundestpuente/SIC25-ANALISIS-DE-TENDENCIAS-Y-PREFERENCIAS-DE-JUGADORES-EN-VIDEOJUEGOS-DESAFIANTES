@@ -68,17 +68,7 @@ plt.ylabel("Horas totales estimadas (AverageForever × CCU)")
 plt.grid(True, alpha=0.3)
 plt.show()
 
-#=====================================4==================================
-plt.figure(figsize=(8,6))
-plt.boxplot([df[df["Dificultad"]==0]["AverageForever"], df[df["Dificultad"]==1]["AverageForever"]],
-            labels=["Fáciles", "Difíciles"])
-plt.ylim(0, 500)  # limitar outliers extremos
-plt.ylabel("Horas promedio jugadas")
-plt.title("Distribución de horas jugadas: fácil vs difícil")
-plt.grid(True, alpha=0.3)
-plt.show()
-
-#=================================5===========================================
+#=================================4===========================================
 df_dificiles = df[df["Dificultad"]==1].copy()
 plt.figure(figsize=(10,6))
 plt.scatter(df_dificiles["ReleaseYear"], df_dificiles["AverageForever"], alpha=0.6, color="red")
@@ -89,7 +79,7 @@ plt.ylim(0, 500)
 plt.grid(True, alpha=0.3)
 plt.show()
 
-#================================6==================================================
+#================================5==================================================
 # Gráfico circular
 labels = ["Fáciles", "Difíciles"]
 sizes = [df[df["Dificultad"]==0].shape[0], df[df["Dificultad"]==1].shape[0]]
